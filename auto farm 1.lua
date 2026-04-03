@@ -1,4 +1,4 @@
--- ========== AUTO FARM LEVEL + BRING MOB - téo hub ==========
+-- ========== AUTO FARM LEVEL + BRING MOB - FIXED (No Teleport đột ngột) ==========
 -- crack by HoangQuan nhatan
 
 -- Bật FastMax
@@ -8,7 +8,6 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/AnhDzaiScript/Setting
 hookfunction(require(game:GetService('ReplicatedStorage').Effect.Container.Death), function() end)
 hookfunction(require(game:GetService('ReplicatedStorage').Effect.Container.Respawn), function() end)
 
--- Anti AFK
 local player = game.Players.LocalPlayer
 player.Idled:connect(function()
     game:GetService('VirtualUser'):Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
@@ -16,7 +15,6 @@ player.Idled:connect(function()
     game:GetService('VirtualUser'):Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- Anti kick (giả lập hoạt động)
 spawn(function()
     while true do
         task.wait(45)
@@ -25,18 +23,16 @@ spawn(function()
     end
 end)
 
--- ========== HÀM DI CHUYỂN (ƯU TIÊN BAY, HẠN CHẾ TELEPORT) ==========
+-- ========== HÀM DI CHUYỂN (CHỈ BAY, KHÔNG TELEPORT) ==========
 local hrp = nil
 function MoveTo(cf)
     hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     local dist = (cf.Position - hrp.Position).Magnitude
-    if dist > 1000 then
-        hrp.CFrame = cf -- teleport nếu quá xa
-    elseif dist > 30 then
-        local tween = game:GetService("TweenService"):Create(hrp, TweenInfo.new(dist/200, Enum.EasingStyle.Linear), {CFrame = cf})
+    if dist > 0.5 then
+        local tween = game:GetService("TweenService"):Create(hrp, TweenInfo.new(dist/180, Enum.EasingStyle.Linear), {CFrame = cf})
         tween:Play()
-        task.wait(dist/200)
+        task.wait(dist/180)
         tween:Cancel()
     else
         hrp.CFrame = cf
@@ -55,7 +51,6 @@ function EquipWeapon()
     local bp = player.Backpack
     local char = player.Character
     if not char then return end
-    -- Ưu tiên Melee
     for _, tool in pairs(bp:GetChildren()) do
         if tool:IsA("Tool") and tool.ToolTip == "Melee" then
             if char:FindFirstChild(tool.Name) == nil then
@@ -64,18 +59,8 @@ function EquipWeapon()
             return
         end
     end
-    -- Nếu không có melee thì dùng Blox Fruit
     for _, tool in pairs(bp:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Blox Fruit" then
-            if char:FindFirstChild(tool.Name) == nil then
-                char.Humanoid:EquipTool(tool)
-            end
-            return
-        end
-    end
-    -- Cuối cùng là Sword
-    for _, tool in pairs(bp:GetChildren()) do
-        if tool:IsA("Tool") and tool.ToolTip == "Sword" then
+        if tool:IsA("Tool") and (tool.ToolTip == "Blox Fruit" or tool.ToolTip == "Sword") then
             if char:FindFirstChild(tool.Name) == nil then
                 char.Humanoid:EquipTool(tool)
             end
@@ -113,11 +98,10 @@ elseif game.PlaceId == 7449423635 then
     World3 = true
 end
 
--- ========== CHECK QUEST (FULL NHIỆM VỤ TỪ LEVEL 1-2600+) ==========
+-- ========== CHECK QUEST (ĐẦY ĐỦ CÁC MỐC LEVEL) ==========
 function CheckQuest()
     local lv = player.Data.Level.Value
-    
-    -- WORLD 1 (Level 1-700)
+    -- World 1
     if World1 then
         if lv <= 9 then return "Bandit",1,"BanditQuest1","Bandit",CFrame.new(1059.37,15.45,1550.42),CFrame.new(1045.96,27.00,1560.82) end
         if lv <= 14 then return "Monkey",1,"JungleQuest","Monkey",CFrame.new(-1598.09,35.55,153.38),CFrame.new(-1448.52,67.85,11.47) end
@@ -150,8 +134,7 @@ function CheckQuest()
             return nil
         end
     end
-    
-    -- WORLD 2 (Level 700-1500)
+    -- World 2
     if World2 then
         if lv <= 724 then return "Raider",1,"Area1Quest","Raider",CFrame.new(-429.54,71.77,1836.18),CFrame.new(-728.33,52.78,2345.77) end
         if lv <= 774 then return "Mercenary",2,"Area1Quest","Mercenary",CFrame.new(-429.54,71.77,1836.18),CFrame.new(-1004.32,80.16,1424.62) end
@@ -180,8 +163,7 @@ function CheckQuest()
             return nil
         end
     end
-    
-    -- WORLD 3 (Level 1500-2600+)
+    -- World 3
     if World3 then
         if lv <= 1524 then return "Pirate Millionaire",1,"PiratePortQuest","Pirate Millionaire",CFrame.new(-450.10,107.68,5950.73),CFrame.new(-245.99,47.31,5584.10) end
         if lv <= 1574 then return "Pistol Billionaire",2,"PiratePortQuest","Pistol Billionaire",CFrame.new(-450.10,107.68,5950.73),CFrame.new(-54.81,83.77,5947.84) end
@@ -240,7 +222,6 @@ function StartAutoFarm()
             local questGui = player.PlayerGui.Main.Quest
             local questText = questGui.Visible and questGui.Container.QuestTitle.Title.Text or ""
             
-            -- Nhận quest nếu chưa có hoặc sai
             if not questGui.Visible or not string.find(questText, nm) then
                 rs:InvokeServer("AbandonQuest")
                 MoveTo(cq)
@@ -251,7 +232,6 @@ function StartAutoFarm()
                 return
             end
             
-            -- Tìm quái gần nhất
             local closest = nil
             local closestDist = math.huge
             for _, e in pairs(workspace.Enemies:GetChildren()) do
@@ -265,19 +245,14 @@ function StartAutoFarm()
             end
             
             if closest then
-                -- Đặt vị trí bring mob (cách quái 8 studs)
                 bringPos = closest.HumanoidRootPart.CFrame * CFrame.new(0, 0, 8)
-                -- Bay đến vị trí đánh (cách quái 15 studs, trên cao)
                 MoveTo(closest.HumanoidRootPart.CFrame * CFrame.new(0, 18, 0))
                 AutoHaki()
                 EquipWeapon()
-                -- Hút các quái khác về
                 BringMob()
-                -- Khóa quái chính
                 closest.HumanoidRootPart.CanCollide = false
                 closest.Humanoid.WalkSpeed = 0
                 closest.Humanoid.JumpPower = 0
-                -- Đánh liên tục
                 game:GetService('VirtualUser'):CaptureController()
                 game:GetService('VirtualUser'):Button1Down(Vector2.new(1280, 672))
             else
@@ -287,6 +262,5 @@ function StartAutoFarm()
     end
 end
 
--- Khởi động
 StartAutoFarm()
-print("Auto Farm Level + Bring Mob đã khởi động!")
+print("Auto Farm Level + Bring Mob đã khởi động (chỉ bay, không teleport đột ngột)")
